@@ -1,0 +1,28 @@
+#!/bin/sh
+
+
+CERTIFICATE_INFO=$(certbot certificates --cert-name {{ letsencrypt_domain_name }})
+EMAIL_ADDRESS=$("{{ letsencrypt_email }}")
+
+
+
+echo [certbot]
+echo email=$(if [ "$EMAIL_ADDRESS" == '' ]; then echo '--register-unsafely-without-email'; else echo '-m'; fi)
+
+echo [ssl]
+echo diffie_hellman_group=$(if [ -e /etc/ssl/certs/dhparam.pem ]; then echo 'True'; else echo 'False'; fi)
+
+
+echo [certificate]
+echo installed=$(if echo "$CERTIFICATE_INFO" | grep -q "{{ letsencrypt_domain_name }}"; then echo 'True'; else echo 'False'; fi)
+echo domains=$(echo "$CERTIFICATE_INFO" | sed -n -e 's/.*Domains: //p')
+echo expiry_date=$(echo "$CERTIFICATE_INFO" | sed -n -e 's/^.*Expiry Date: \([0-9]\{4\}\-[0-9]\{2\}\-[0-9]\{2\}\).*/\1/p')
+echo valid_days=$(echo "$CERTIFICATE_INFO" | sed -n -e 's/^.*VALID: \([0-9]\{1,2\}\).*/\1/p')
+echo cert_path=$(echo "$CERTIFICATE_INFO" | sed -n -e 's/^.*Certificate Path: \(.*\)/\1/p')
+echo key_path=$(echo "$CERTIFICATE_INFO" | sed -n -e 's/^.*Private Key Path: \(.*\)/\1/p')
+
+
+echo [apache]
+
+
+echo [nginx]

@@ -1,0 +1,38 @@
+# LetsEncrypt tasks - main.yml
+---
+- name: add letsencrypt certbot repo
+  apt_repository:
+    repo: ppa:certbot/certbot
+  register: add_certbot_repo
+
+- name: update packages
+  apt:
+    update_cache: yes
+  when: add_certbot_repo.changed
+
+- name: install required packages - letsencrypt
+  apt:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - certbot
+    - openssl
+
+- name: include facts tasks
+  include: facts.yml
+
+- name: generate Diffie-Hellman group
+  command: openssl dhparam -out /etc/ssl/certs/dhparam.pem {{ diffie_hellman_size }}
+  when: ansible_local[letsencrypt_fact_name]['ssl']['diffie_hellman_group'] != 'True'
+
+- name: include webserver tasks
+  include: "{{ letsencrypt_webserver }}.yml"
+
+- name: create renew cert cron job
+  cron:
+    name: "renew letsencrypt cert"
+    minute: "0"
+    hour: "1"
+    weekday: "1"
+    user: root
+    job: '/usr/bin/certbot renew --quiet --renew-hook "/bin/systemctl reload {{ letsencrypt_webserver }}"'
